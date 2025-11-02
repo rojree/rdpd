@@ -1,4 +1,4 @@
-name: The Real RDP
+name: The Real RDP (Corrected)
 
 on:
   workflow_dispatch:
@@ -7,12 +7,11 @@ jobs:
   rdp:
     runs-on: windows-latest
     steps:
-      - name: 1. Setup Tunnel and User
-        uses: jonathan-casarrubias/rdp-github-action@v1.1
+      - name: 1. Setup RDP Server
+        # This is the corrected action name
+        uses: P3TERX/rdp-github-action@v1.1
         with:
-          # This is the only secret you need to set
           ngrok_token: ${{ secrets.NGROK_AUTH_TOKEN }}
-          # You can change the username and password
           username: user
           password: StrongPassword123!
 
