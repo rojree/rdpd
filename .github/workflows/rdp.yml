@@ -1,41 +1,42 @@
-name: RDP Final Final Version
+name: Windows RDP Server
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  rdp:
     runs-on: windows-latest
     steps:
-      - name: Start RDP
+      - name: Setup RDP Server
         run: |
-          # Download and extract Ngrok
+          # 1. Download and Extract Ngrok
           Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
           Expand-Archive "ngrok.zip"
           
-          # Add Ngrok auth token
+          # 2. Add Ngrok Auth Token
           ./ngrok.exe config add-authtoken "${{ secrets.NGROK_AUTH_TOKEN }}"
           
-          # Enable RDP and create user
+          # 3. Enable RDP & Create User
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          net user "runneradmin" "win-@12345" /add
-          net localgroup "Administrators" "runneradmin" /add
-          net localgroup "Remote Desktop Users" "runneradmin" /add
+          net user "rdp-user" "FreeRDP@2025" /add
+          net localgroup "Administrators" "rdp-user" /add
+          net localgroup "Remote Desktop Users" "rdp-user" /add
           
-          # Start Ngrok tunnel in the background
+          # 4. Start Ngrok Tunnel
           Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389" -NoNewWindow
           
-          # Wait for Ngrok to start and get the URL
+          # 5. Get RDP Info
           Start-Sleep -Seconds 15
           $tunnel_info = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels"
-          $tunnel_url = $tunnel_info.tunnels[0].public_url
+          $rdp_url = $tunnel_info.tunnels[0].public_url
           
+          # 6. Display Info
           Write-Host "=========================================="
-          Write-Host "RDP Address: $tunnel_url"
-          Write-Host "Username:    runneradmin"
-          Write-Host "Password:    win-@12345"
+          Write-Host "RDP Address: $rdp_url"
+          Write-Host "Username:    rdp-user"
+          Write-Host "Password:    FreeRDP@2025"
           Write-Host "=========================================="
           
-          # Keep the workflow alive
+          # 7. Keep Alive
           Start-Sleep -Seconds 36000
