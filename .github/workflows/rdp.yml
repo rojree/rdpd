@@ -1,4 +1,4 @@
-name: Windows RDP Server
+name: The Real RDP
 
 on:
   workflow_dispatch:
@@ -7,36 +7,14 @@ jobs:
   rdp:
     runs-on: windows-latest
     steps:
-      - name: Setup RDP Server
-        run: |
-          # 1. Download and Extract Ngrok
-          Invoke-WebRequest -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" -OutFile "ngrok.zip"
-          Expand-Archive "ngrok.zip"
-          
-          # 2. Add Ngrok Auth Token
-          ./ngrok.exe config add-authtoken "${{ secrets.NGROK_AUTH_TOKEN }}"
-          
-          # 3. Enable RDP & Create User
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          net user "rdp-user" "FreeRDP@2025" /add
-          net localgroup "Administrators" "rdp-user" /add
-          net localgroup "Remote Desktop Users" "rdp-user" /add
-          
-          # 4. Start Ngrok Tunnel
-          Start-Process -FilePath ".\ngrok.exe" -ArgumentList "tcp 3389" -NoNewWindow
-          
-          # 5. Get RDP Info
-          Start-Sleep -Seconds 15
-          $tunnel_info = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels"
-          $rdp_url = $tunnel_info.tunnels[0].public_url
-          
-          # 6. Display Info
-          Write-Host "=========================================="
-          Write-Host "RDP Address: $rdp_url"
-          Write-Host "Username:    rdp-user"
-          Write-Host "Password:    FreeRDP@2025"
-          Write-Host "=========================================="
-          
-          # 7. Keep Alive
-          Start-Sleep -Seconds 36000
+      - name: 1. Setup Tunnel and User
+        uses: jonathan-casarrubias/rdp-github-action@v1.1
+        with:
+          # This is the only secret you need to set
+          ngrok_token: ${{ secrets.NGROK_AUTH_TOKEN }}
+          # You can change the username and password
+          username: user
+          password: StrongPassword123!
+
+      - name: 2. Keep Alive
+        run: Start-Sleep -Seconds 36000
