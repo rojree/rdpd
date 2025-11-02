@@ -1,0 +1,40 @@
+name: Windows RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 9999
+    steps:
+      - name: Download Ngrok & Set Auth Token
+        run: |
+          echo "NGROK_AUTH_TOKEN=${{ secrets.NGROK_AUTH_TOKEN }}" >> $env:GITHUB_ENV
+          Invoke-WebRequest -Uri https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+          Expand-Archive ngrok.zip
+
+      - name: Create RDP User
+        run: |
+          $password = "win-@12345"
+          echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
+          net user "runneradmin" $password /add
+          net localgroup "Administrators" "runneradmin" /add
+          net localgroup "Remote Desktop Users" "runneradmin" /add
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+
+      - name: Start Tunnel
+        run: |
+          Start-Process ./ngrok.exe -ArgumentList "tcp 3389" -NoNewWindow
+          Start-Sleep 10
+          $url = (Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:4040/api/tunnels").tunnels[0].public_url
+          echo "RDP_URL=$url" >> $env:GITHUB_ENV
+          echo "RDP URL: $url"
+
+      - name: Keep Alive
+        run: |
+          while ($true) {
+            Start-Sleep -Seconds 60
+            echo "RDP session is active. URL: ${{ env.RDP_URL }}"
+          }
